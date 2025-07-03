@@ -1,0 +1,5 @@
+{
+    "modulos\/clientes\/clientes.php": true,
+    "modulos\/Inventario\/producto_form.php": true,
+    "modulos\/clientes\/cliente_form.php": true
+}

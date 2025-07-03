@@ -1,0 +1,1 @@
+<?php require_once '../../config.php'; echo "Exportar clientes - En desarrollo<br><a href='clientes.php'>Volver</a>"; ?>

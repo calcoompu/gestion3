@@ -1,0 +1,132 @@
+<?php
+require_once '../../config/config.php';
+iniciarSesionSegura();
+requireLogin();
+
+// Verificar que el usuario sea administrador
+if (!isset($_SESSION['rol']) || !in_array($_SESSION['rol'], ['admin', 'administrador'])) {
+    header('Location: ../../menu_principal.php?error=acceso_denegado');
+    exit;
+}
+
+// Obtener estadísticas del sistema
+try {
+    $pdo = conectarDB();
+    
+    // Estadísticas de usuarios
+    $stmt = $pdo->query("SELECT 
+        COUNT(*) as total_usuarios,
+        SUM(CASE WHEN activo = 1 THEN 1 ELSE 0 END) as usuarios_activos,
+        SUM(CASE WHEN rol IN ('admin', 'administrador') THEN 1 ELSE 0 END) as administradores
+        FROM usuarios");
+    $stats_usuarios = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    // Estadísticas del sistema
+    $stmt = $pdo->query("SELECT 
+        (SELECT COUNT(*) FROM clientes WHERE activo = 1) as clientes_activos,
+        (SELECT COUNT(*) FROM productos WHERE activo = 1) as productos_activos,
+        (SELECT COUNT(*) FROM categorias WHERE activo = 1) as categorias_activas,
+        (SELECT COUNT(*) FROM lugares WHERE activo = 1) as ubicaciones_activas");
+    $stats_sistema = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+} catch (PDOException $e) {
+    $error_mensaje = "Error al obtener estadísticas: " . $e->getMessage();
+}
+?>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Administración</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        body { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%); color: white; }
+        .admin-card { background: rgba(255,255,255,0.1); border-radius: 15px; padding: 20px; margin-bottom: 20px; }
+        .stat-number { font-size: 2rem; font-weight: bold; color: #e74c3c; }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-12">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h1><i class="bi bi-shield-check me-2"></i>Panel de Administración</h1>
+                    <a href="../../menu_principal.php" class="btn btn-secondary">
+                        <i class="bi bi-arrow-left me-1"></i>Volver al Sistema
+                    </a>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="admin-card text-center">
+                            <div class="stat-number"><?php echo $stats_usuarios['total_usuarios'] ?? 0; ?></div>
+                            <div>Total Usuarios</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="admin-card text-center">
+                            <div class="stat-number"><?php echo $stats_sistema['clientes_activos'] ?? 0; ?></div>
+                            <div>Clientes Activos</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="admin-card text-center">
+                            <div class="stat-number"><?php echo $stats_sistema['productos_activos'] ?? 0; ?></div>
+                            <div>Productos Activos</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="admin-card text-center">
+                            <div class="stat-number"><?php echo $stats_sistema['categorias_activas'] ?? 0; ?></div>
+                            <div>Categorías Activas</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="admin-card">
+                            <h5><i class="bi bi-people me-2"></i>Gestión de Usuarios</h5>
+                            <p>Administrar usuarios del sistema</p>
+                            <a href="usuarios.php" class="btn btn-primary">Gestionar Usuarios</a>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="admin-card">
+                            <h5><i class="bi bi-folder me-2"></i>Categorías</h5>
+                            <p>Administrar categorías de productos</p>
+                            <a href="categorias_admin.php" class="btn btn-primary">Gestionar Categorías</a>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="admin-card">
+                            <h5><i class="bi bi-geo-alt me-2"></i>Ubicaciones</h5>
+                            <p>Administrar lugares y almacenes</p>
+                            <a href="lugares_admin.php" class="btn btn-primary">Gestionar Ubicaciones</a>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="admin-card">
+                            <h5><i class="bi bi-gear me-2"></i>Configuración del Sistema</h5>
+                            <p>Configurar parámetros generales</p>
+                            <a href="configuracion_sistema.php" class="btn btn-primary">Configurar</a>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="admin-card">
+                            <h5><i class="bi bi-graph-up me-2"></i>Reportes</h5>
+                            <p>Ver reportes y estadísticas</p>
+                            <a href="reportes_admin.php" class="btn btn-primary">Ver Reportes</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

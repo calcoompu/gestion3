@@ -1,0 +1,131 @@
+<?php
+require_once '../../config/config.php';
+iniciarSesionSegura();
+requireLogin();
+
+$factura_id = $_GET['id'] ?? null;
+$factura = null;
+
+if ($factura_id) {
+    try {
+        $pdo = conectarDB();
+        $stmt = $pdo->prepare("SELECT * FROM facturas WHERE id = ?");
+        $stmt->execute([$factura_id]);
+        $factura = $stmt->fetch(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        $error = "Error al obtener factura: " . $e->getMessage();
+    }
+}
+
+// Obtener clientes para el select
+try {
+    $pdo = conectarDB();
+    $stmt = $pdo->query("SELECT id, codigo, nombre, apellido FROM clientes WHERE activo = 1 ORDER BY nombre");
+    $clientes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    $error = "Error al obtener clientes: " . $e->getMessage();
+}
+?>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><?php echo $factura ? 'Editar' : 'Nueva'; ?> Factura</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <h1><?php echo $factura ? 'Editar' : 'Nueva'; ?> Factura</h1>
+                
+                <form method="POST" action="gestionar_factura.php">
+                    <?php if ($factura): ?>
+                        <input type="hidden" name="id" value="<?php echo $factura['id']; ?>">
+                        <input type="hidden" name="accion" value="editar">
+                    <?php else: ?>
+                        <input type="hidden" name="accion" value="crear">
+                    <?php endif; ?>
+                    
+                    <div class="mb-3">
+                        <label for="cliente_id" class="form-label">Cliente</label>
+                        <select class="form-select" id="cliente_id" name="cliente_id" required>
+                            <option value="">Seleccionar cliente...</option>
+                            <?php foreach ($clientes as $cliente): ?>
+                                <option value="<?php echo $cliente['id']; ?>" 
+                                        <?php echo ($factura && $factura['cliente_id'] == $cliente['id']) ? 'selected' : ''; ?>>
+                                    <?php echo htmlspecialchars($cliente['codigo'] . ' - ' . $cliente['nombre'] . ' ' . $cliente['apellido']); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="fecha_factura" class="form-label">Fecha de Factura</label>
+                                <input type="date" class="form-control" id="fecha_factura" name="fecha_factura" 
+                                       value="<?php echo $factura ? $factura['fecha_factura'] : date('Y-m-d'); ?>" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="fecha_vencimiento" class="form-label">Fecha de Vencimiento</label>
+                                <input type="date" class="form-control" id="fecha_vencimiento" name="fecha_vencimiento" 
+                                       value="<?php echo $factura ? $factura['fecha_vencimiento'] : date('Y-m-d', strtotime('+30 days')); ?>" required>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="estado" class="form-label">Estado</label>
+                        <select class="form-select" id="estado" name="estado" required>
+                            <option value="pendiente" <?php echo ($factura && $factura['estado'] == 'pendiente') ? 'selected' : ''; ?>>Pendiente</option>
+                            <option value="pagada" <?php echo ($factura && $factura['estado'] == 'pagada') ? 'selected' : ''; ?>>Pagada</option>
+                            <option value="vencida" <?php echo ($factura && $factura['estado'] == 'vencida') ? 'selected' : ''; ?>>Vencida</option>
+                            <option value="cancelada" <?php echo ($factura && $factura['estado'] == 'cancelada') ? 'selected' : ''; ?>>Cancelada</option>
+                        </select>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="subtotal" class="form-label">Subtotal</label>
+                                <input type="number" step="0.01" class="form-control" id="subtotal" name="subtotal" 
+                                       value="<?php echo $factura ? $factura['subtotal'] : '0.00'; ?>" required>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="impuestos" class="form-label">Impuestos</label>
+                                <input type="number" step="0.01" class="form-control" id="impuestos" name="impuestos" 
+                                       value="<?php echo $factura ? $factura['impuestos'] : '0.00'; ?>" required>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="total" class="form-label">Total</label>
+                                <input type="number" step="0.01" class="form-control" id="total" name="total" 
+                                       value="<?php echo $factura ? $factura['total'] : '0.00'; ?>" required>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="notas" class="form-label">Notas</label>
+                        <textarea class="form-control" id="notas" name="notas" rows="3"><?php echo $factura ? htmlspecialchars($factura['notas']) : ''; ?></textarea>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between">
+                        <a href="facturas.php" class="btn btn-secondary">Cancelar</a>
+                        <button type="submit" class="btn btn-primary">
+                            <?php echo $factura ? 'Actualizar' : 'Crear'; ?> Factura
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

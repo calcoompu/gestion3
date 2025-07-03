@@ -1,0 +1,1 @@
+<?php require_once '../../config.php'; echo "Pedidos del cliente - En desarrollo<br><a href='clientes.php'>Volver</a>"; ?>
